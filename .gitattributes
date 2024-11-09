@@ -1,0 +1,7 @@
+# default behavior to automatically normalize line endings
+* text eol=lf
+
+# default behavior for binary files
+*.jpg binary
+*.png binary
+*.gif binary
