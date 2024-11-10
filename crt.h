@@ -235,7 +235,7 @@ namespace CRT
 	/// set a buffer to a specified wide character, alternative of 'wmempset()'
 	/// @remarks: sets the first @a`nCount` wide characters of @a`pwDestination` to the @a`wChar` value
 	/// @returns: pointer to the @a`pwDestination` advanced by @a'nCount'
-	Q_INLINE Q_CRT_DIAGNOSE_AS_BUILTIN(__builtin_wmemset, 1, 2, 3) Q_CRT_NO_BUILTIN inline wchar_t* MemorySetW(wchar_t* pwDestination, const wchar_t wChar, std::size_t nCount)
+	Q_INLINE Q_CRT_NO_BUILTIN inline wchar_t* MemorySetW(wchar_t* pwDestination, const wchar_t wChar, std::size_t nCount)
 	{
 		while (nCount-- != 0U)
 			*pwDestination++ = wChar;
@@ -300,7 +300,7 @@ namespace CRT
 	/// copy one wide buffer to another, alternative of 'wmempcpy()'
 	/// @remarks: copies the initial @a`nCount` wide characters from @a`pSource` to @a`pwDestination`. if the source and destination regions overlap, the behavior is undefined
 	/// @returns: pointer to the @a`pwDestination` advanced by @a'nCount'
-	Q_INLINE Q_CRT_DIAGNOSE_AS_BUILTIN(__builtin_memcpy, 1, 2, 3) Q_CRT_NO_BUILTIN inline wchar_t* MemoryCopyW(wchar_t* pwDestination, const wchar_t* pwSource, std::size_t nCount)
+	Q_INLINE Q_CRT_NO_BUILTIN inline wchar_t* MemoryCopyW(wchar_t* pwDestination, const wchar_t* pwSource, std::size_t nCount)
 	{
 		while (nCount-- != 0U)
 			*pwDestination++ = *pwSource++;
@@ -362,7 +362,7 @@ namespace CRT
 	/// move one wide buffer to another, alternative of 'wmemmove()'
 	/// @remarks: copies the initial @a`nCount` wide characters from @a`pwSource` to @a`pwDestination`. if some portions of the source and the destination regions overlap, both functions ensure that the original source characters in the overlapping region are copied before being overwritten
 	/// @returns: pointer to the @a`pwDestination`
-	Q_INLINE Q_CRT_DIAGNOSE_AS_BUILTIN(__builtin_wmemmove, 1, 2, 3) Q_CRT_NO_BUILTIN inline wchar_t* MemoryMoveW(wchar_t* pwDestination, const wchar_t* pwSource, std::size_t nCount)
+	Q_INLINE Q_CRT_NO_BUILTIN inline wchar_t* MemoryMoveW(wchar_t* pwDestination, const wchar_t* pwSource, std::size_t nCount)
 	{
 		auto pwCurrentDestination = pwDestination;
 

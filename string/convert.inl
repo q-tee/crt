@@ -1130,6 +1130,7 @@ std::size_t TimeToString(T* tszDestination, std::size_t nDestinationSize, const 
 			}
 			case 'z':
 			{
+			#ifndef Q_COMPILER_CLANG
 				// check if the time zone extension member is present
 				if constexpr (requires { std::tm::tm_gmtoff; })
 				{
@@ -1161,12 +1162,14 @@ std::size_t TimeToString(T* tszDestination, std::size_t nDestinationSize, const 
 					*tszDestinationEnd++ = static_cast<T>(*szDigitPair++);
 					*tszDestinationEnd++ = static_cast<T>(*szDigitPair);
 				}
+			#endif
 				// @test: do we have other ways to get it on windows other than winapi calls?
 
 				break;
 			}
 			case 'Z':
 			{
+			#ifndef Q_COMPILER_CLANG
 				// check if the time zone extension member is present
 				if constexpr (requires { std::tm::tm_zone; })
 				{
@@ -1184,6 +1187,7 @@ std::size_t TimeToString(T* tszDestination, std::size_t nDestinationSize, const 
 				}
 				// otherwise print the time zone name
 				else
+			#endif
 				{
 					if (nRemainingSize <= 3U)
 						return 0U;
