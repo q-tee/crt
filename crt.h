@@ -1,8 +1,12 @@
 #pragma once
 #include <q-tee/common/common.h>
 
+// used: [stl] base types
+#include <cstdint>
 // used: [stl] type traits
 #include <type_traits>
+// used: [stl] numeric_limits
+#include <limits>
 // used: [stl] bit_cast
 #include <bit>
 
@@ -1133,18 +1137,6 @@ namespace CRT
 	#pragma region crt_string_encode
 	#ifdef Q_CRT_STRING_ENCODE
 	#include "string/encode.inl"
-	#endif
-	#pragma endregion
-
-	/*
-	 * @section: string formatting
-	 * - these functions can write past the end of a buffer that is too small.
-	 *   to prevent buffer overruns, ensure that buffer is large enough to hold the formatted data and the trailing null-character.
-	 *   misuse of these functions can cause serious security issues in your code
-	 */
-	#pragma region crt_string_format
-	#ifdef Q_CRT_STRING_FORMAT
-	#include "string/format.inl"
 	#endif
 	#pragma endregion
 }
