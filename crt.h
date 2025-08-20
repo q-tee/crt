@@ -200,7 +200,7 @@ namespace CRT
 		}
 		nCount &= 15U;
 	#endif
-	#ifdef Q_COMPILER_MSC
+	#if defined(Q_COMPILER_MSC) || defined(Q_COMPILER_CLANG)
 	#ifdef Q_ARCH_X86_64
 		// copy the max of qwords
 		::__stosq(reinterpret_cast<std::uint64_t*>(pCurrentDestination), static_cast<std::uint64_t>(uByte) * 0x0101010101010101ULL, nCount >> 3U);
@@ -217,10 +217,10 @@ namespace CRT
 		nCount &= 1U;
 	#endif
 		// copy the rest of bytes
-	#ifdef Q_COMPILER_CLANG
+	#if defined(Q_COMPILER_CLANG) || defined(Q_COMPILER_GCC)
 		/*
-		 * @note: llvm implements '__stosb' intrinsic as volatile 'memset' that may lead to infinity recursion
-		 * @source: https://lists.llvm.org/pipermail/cfe-commits/Week-of-Mon-20161003/172885.html
+		 * @note: llvm implements '__stosb' intrinsic as volatile 'memset' ('__builtin_memset') that may lead to infinity recursion
+		 * @source: https://github.com/llvm/llvm-project/commit/1deab387170a0877485e9aca7461acac79b33be3
 		 */
 		while (nCount-- != 0U)
 			*pCurrentDestination++ = uByte;
@@ -261,7 +261,7 @@ namespace CRT
 		}
 		nCount &= 15U;
 	#endif
-	#ifdef Q_COMPILER_MSC
+	#if defined(Q_COMPILER_MSC) || defined(Q_COMPILER_CLANG)
 		std::size_t nCopiedCount;
 	#ifdef Q_ARCH_X86_64
 		// copy the max of qwords
@@ -283,15 +283,12 @@ namespace CRT
 		pCurrentDestination += nCopiedCount;
 		pCurrentSource += nCopiedCount;
 		nCount &= 1U;
-	#endif
 		// copy the rest of bytes
-	#ifdef Q_COMPILER_CLANG
-		// @test: not sure if its same as memset getting optimized into memcpy call
-		while (nCount-- != 0U)
-			*pCurrentDestination++ = *pCurrentSource++;
-	#else
 		::__movsb(pCurrentDestination, pCurrentSource, nCount);
 		pCurrentDestination += nCount;
+	#else
+		while (nCount-- != 0U)
+			*pCurrentDestination++ = *pCurrentSource++;
 	#endif
 
 		return pCurrentDestination;
@@ -319,7 +316,7 @@ namespace CRT
 		// check if buffers don't overlap, copy from lower to higher addresses
 		if (pCurrentDestination <= pCurrentSource || pCurrentDestination >= pCurrentSource + nCount)
 		{
-		#ifdef Q_COMPILER_MSC
+		#if defined(Q_COMPILER_MSC) || defined(Q_COMPILER_CLANG)
 			std::size_t nCopiedCount;
 		#ifdef Q_ARCH_X86_64
 			// copy the max of qwords
@@ -341,10 +338,13 @@ namespace CRT
 			pCurrentDestination += nCopiedCount;
 			pCurrentSource += nCopiedCount;
 			nCount &= 1U;
-		#endif
+			// copy the rest of bytes
+			::__movsb(pCurrentDestination, pCurrentSource, nCount);
+		#else
 			// copy the rest of bytes
 			while (nCount-- != 0U)
 				*pCurrentDestination++ = *pCurrentSource++;
+		#endif
 		}
 		// otherwise buffers overlapping, copy from higher to lower addresses
 		else
@@ -352,6 +352,10 @@ namespace CRT
 			std::uint8_t* pDestinationEnd = pCurrentDestination + (nCount - 1U);
 			const std::uint8_t* pSourceEnd = pCurrentSource + (nCount - 1U);
 
+			/*
+			 * @note: naive loop should be faster than setting DF for '__movsb'
+			 * @source: https://docs.amd.com/v/u/en-US/24594_3.37 (AMD APM 3 at 1.2.6)
+			 */
 			while (nCount-- != 0U)
 				*pDestinationEnd-- = *pSourceEnd--;
 		}
@@ -1132,4 +1136,15 @@ namespace CRT
 	#endif
 	#pragma endregion
 
+	/*
+	 * @section: string formatting
+	 * - these functions can write past the end of a buffer that is too small.
+	 *   to prevent buffer overruns, ensure that buffer is large enough to hold the formatted data and the trailing null-character.
+	 *   misuse of these functions can cause serious security issues in your code
+	 */
+	#pragma region crt_string_format
+	#ifdef Q_CRT_STRING_FORMAT
+	#include "string/format.inl"
+	#endif
+	#pragma endregion
 }
