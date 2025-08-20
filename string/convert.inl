@@ -50,7 +50,6 @@ template <typename T> requires (std::is_floating_point_v<T>)
 struct RealTraits_t
 {
 	static_assert(std::numeric_limits<T>::is_iec559);
-	static_assert(sizeof(long double) == 8U, "q-tee doesn't support binary128 format");
 
 	// bit-equivalent integer type for given floating point type
 	using BitEquivalent_t = std::conditional_t<std::is_same_v<T, double> || std::is_same_v<T, long double>, std::uint64_t, std::uint32_t>;
@@ -210,6 +209,11 @@ struct BigInteger_t
 	std::uint64_t ullLow;
 	std::uint64_t ullHigh;
 };
+
+template <typename T>
+concept HasTmZone_t = requires { T::tm_zone; };
+template <typename T>
+concept HasTmGmtOff_t = requires { T::tm_gmtoff; };
 
 /// reverse every character in the string, alternative of '_strrev()', '_wcsrev()'
 /// @returns: pointer to the @a`tszSource`
@@ -1130,11 +1134,10 @@ std::size_t TimeToString(T* tszDestination, std::size_t nDestinationSize, const 
 			}
 			case 'z':
 			{
-			#ifndef Q_COMPILER_CLANG
 				// check if the time zone extension member is present
-				if constexpr (requires { std::tm::tm_gmtoff; })
+				if constexpr (HasTmGmtOff_t<std::tm>)
 				{
-					auto GetTimeZoneOffset = []<typename Tm_t> requires (Tm_t::tm_gmtoff)(const Tm_t* pTimeEx)
+					auto GetTimeZoneOffset = []<HasTmGmtOff_t Tm_t>(const Tm_t* pTimeEx)
 					{
 						return pTimeEx->tm_gmtoff;
 					};
@@ -1162,18 +1165,17 @@ std::size_t TimeToString(T* tszDestination, std::size_t nDestinationSize, const 
 					*tszDestinationEnd++ = static_cast<T>(*szDigitPair++);
 					*tszDestinationEnd++ = static_cast<T>(*szDigitPair);
 				}
-			#endif
+
 				// @test: do we have other ways to get it on windows other than winapi calls?
 
 				break;
 			}
 			case 'Z':
 			{
-			#ifndef Q_COMPILER_CLANG
 				// check if the time zone extension member is present
-				if constexpr (requires { std::tm::tm_zone; })
+				if constexpr (HasTmZone_t<std::tm>)
 				{
-					auto GetTimeZoneName = []<typename Tm_t> requires (Tm_t::tm_zone)(const Tm_t* pTimeEx)
+					auto GetTimeZoneName = []<HasTmZone_t Tm_t>(const Tm_t* pTimeEx)
 					{
 						return pTimeEx->tm_zone;
 					};
@@ -1187,7 +1189,6 @@ std::size_t TimeToString(T* tszDestination, std::size_t nDestinationSize, const 
 				}
 				// otherwise print the time zone name
 				else
-			#endif
 				{
 					if (nRemainingSize <= 3U)
 						return 0U;
