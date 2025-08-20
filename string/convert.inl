@@ -1235,10 +1235,10 @@ std::size_t TimeToString(T* tszDestination, std::size_t nDestinationSize, const 
 /// @remarks: converts @a`tszSourceBegin` string containing sequence of characters in form [whitespace][{+|-}][digits] that can be interpreted as a numeric value to specified integer type. stops reading at the first character that can't be recognized as part of number and store its position into @a`ptszSourceEnd`
 /// @returns: integer number converted from a string or 0 if no conversion could be performed
 template <typename V = int, typename T> requires (std::is_integral_v<V> && (std::is_same_v<T, char> || std::is_same_v<T, wchar_t>))
-constexpr V StringToInteger(const T* tszSourceBegin, T** ptszSourceEnd = nullptr, int iBase = 0, errno_t* pnError = nullptr)
+constexpr V StringToInteger(const T* tszSourceBegin, T** ptszSourceEnd = nullptr, int iBase = 0, int* pnError = nullptr)
 {
 	// set a local variable as error output if it's not set
-	errno_t nError = 0;
+	int nError = 0;
 	if (pnError == nullptr)
 		pnError = &nError;
 
@@ -1345,13 +1345,13 @@ constexpr V StringToInteger(const T* tszSourceBegin, T** ptszSourceEnd = nullptr
 /// @remarks: converts @a`tszSourceBegin` string containing sequence of characters in form [whitespace][{+|-}][digits][.digits][{e|E}[{+|-}]digits] that can be interpreted as a numeric value to specified floating-point type. stops reading at the first character that can't be recognized as part of number and store its position into @a`ptszSourceEnd`
 /// @returns: floating-point number converted from a string or 0.0 if no conversion could be performed
 template <typename V = float, typename T> requires (std::is_floating_point_v<V> && (std::is_same_v<T, char> || std::is_same_v<T, wchar_t>))
-constexpr V StringToReal(const T* tszSourceBegin, T** ptszSourceEnd = nullptr, errno_t* pnError = nullptr)
+constexpr V StringToReal(const T* tszSourceBegin, T** ptszSourceEnd = nullptr, int* pnError = nullptr)
 {
 	using UIntType_t = typename RealTraits_t<V>::BitEquivalent_t;
 	UIntType_t uBits;
 
 	// set a local variable as error output if it's not set
-	errno_t nError = 0;
+	int nError = 0;
 	if (pnError == nullptr)
 		pnError = &nError;
 
