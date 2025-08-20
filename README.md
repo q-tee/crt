@@ -29,3 +29,7 @@ StringCatN  | return value changed in favor of `stpncat()` \/ `wcpncat()`
 StringSpan  | return value changed in favor of `strpspn()` \/ `wcspspn()`
 
 other than that behaviour of the rest functions are based on ISO-9899 (C standard)
+
+# further information
+requires [common](https://github.com/q-tee/common/) library to be also installed.
+you can read about installation, contributing and look for other general information on the [q-tee](https://github.com/q-tee/) main page.
