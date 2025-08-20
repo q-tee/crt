@@ -25,7 +25,7 @@
 #ifdef Q_COMPILER_CLANG
 #define Q_CRT_DIAGNOSE_AS_BUILTIN(...) [[clang::diagnose_as_builtin(__VA_ARGS__)]]
 #elif defined(Q_COMPILER_GCC)
-#define Q_CRT_NO_BUILTIN __attribute__((diagnose_as_builtin(__VA_ARGS__)))
+#define Q_CRT_DIAGNOSE_AS_BUILTIN(...) __attribute__((diagnose_as_builtin(__VA_ARGS__)))
 #else
 #define Q_CRT_DIAGNOSE_AS_BUILTIN(...)
 #endif
