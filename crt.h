@@ -204,7 +204,7 @@ namespace CRT
 		}
 		nCount &= 15U;
 	#endif
-	#if defined(Q_COMPILER_MSC) || defined(Q_COMPILER_CLANG)
+	#if defined(Q_OS_WINDOWS) && (defined(Q_COMPILER_MSC) || defined(Q_COMPILER_CLANG))
 	#ifdef Q_ARCH_X86_64
 		// copy the max of qwords
 		::__stosq(reinterpret_cast<std::uint64_t*>(pCurrentDestination), static_cast<std::uint64_t>(uByte) * 0x0101010101010101ULL, nCount >> 3U);
@@ -221,7 +221,7 @@ namespace CRT
 		nCount &= 1U;
 	#endif
 		// copy the rest of bytes
-	#if defined(Q_COMPILER_CLANG) || defined(Q_COMPILER_GCC)
+	#if !defined(Q_OS_WINDOWS) || defined(Q_COMPILER_CLANG) || defined(Q_COMPILER_GCC)
 		/*
 		 * @note: llvm implements '__stosb' intrinsic as volatile 'memset' ('__builtin_memset') that may lead to infinity recursion
 		 * @source: https://github.com/llvm/llvm-project/commit/1deab387170a0877485e9aca7461acac79b33be3
@@ -265,7 +265,7 @@ namespace CRT
 		}
 		nCount &= 15U;
 	#endif
-	#if defined(Q_COMPILER_MSC) || defined(Q_COMPILER_CLANG)
+	#if defined(Q_OS_WINDOWS) && (defined(Q_COMPILER_MSC) || defined(Q_COMPILER_CLANG))
 		std::size_t nCopiedCount;
 	#ifdef Q_ARCH_X86_64
 		// copy the max of qwords
@@ -320,7 +320,7 @@ namespace CRT
 		// check if buffers don't overlap, copy from lower to higher addresses
 		if (pCurrentDestination <= pCurrentSource || pCurrentDestination >= pCurrentSource + nCount)
 		{
-		#if defined(Q_COMPILER_MSC) || defined(Q_COMPILER_CLANG)
+		#if defined(Q_OS_WINDOWS) && (defined(Q_COMPILER_MSC) || defined(Q_COMPILER_CLANG))
 			std::size_t nCopiedCount;
 		#ifdef Q_ARCH_X86_64
 			// copy the max of qwords
