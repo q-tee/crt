@@ -144,7 +144,7 @@ struct BigInteger_t
 	{
 	#if defined(Q_COMPILER_CLANG) && Q_ARCH_BIT == 64
 		std::uint64_t ullCarryLow;
-		this->ullLow = ::__builtin_addcll(this->ullLow, other.ullLow, 0ULL, &ullCarryLow);
+		this->ullLow = ::__builtin_addcll(this->ullLow, other.ullLow, 0ULL, reinterpret_cast<unsigned long long*>(&ullCarryLow));
 		this->ullHigh += other.ullHigh + ullCarryLow;
 	#elif defined(Q_COMPILER_GCC) && Q_ARCH_BIT == 64
 		// @test: haven't tested that
