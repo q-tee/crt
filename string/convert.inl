@@ -13,7 +13,7 @@ namespace DETAIL
 		return ::_umul128(ullMultiplier, ullMultiplicand, pullProductHigh);
 	#endif
 	#elif (defined(Q_COMPILER_CLANG) || defined(Q_COMPILER_GCC)) && Q_ARCH_BIT == 64
-		const __uint128_t uResult = (static_cast<__uint128_t>(this->ullMultiplicand) * ullMultiplier;
+		const __uint128_t uResult = static_cast<__uint128_t>(ullMultiplicand) * ullMultiplier;
 		*pullProductHigh = static_cast<std::uint64_t>(uResult >> 64ULL);
 		return static_cast<std::uint64_t>(uResult);
 	#else
