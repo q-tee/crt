@@ -1,5 +1,31 @@
 #ifndef Q_CRT_STRING_CONVERT_IMPLEMENTATION
 #define Q_CRT_STRING_CONVERT_IMPLEMENTATION
+namespace DETAIL
+{
+	Q_INLINE inline std::uint64_t Multiply64To128(std::uint64_t ullMultiplicand, std::uint64_t ullMultiplier, std::uint64_t* pullProductHigh)
+	{
+	#if defined(Q_COMPILER_MSC) && Q_ARCH_BIT == 64
+	#if defined(Q_ARCH_ARM64)
+		// @test: haven't tested that
+		*pullProductHigh = ::__umulh(ullMultiplicand, ullMultiplier);
+		return ullLow * ullMultiplier;
+	#else
+		return ::_umul128(ullMultiplier, ullMultiplicand, pullProductHigh);
+	#endif
+	#elif (defined(Q_COMPILER_CLANG) || defined(Q_COMPILER_GCC)) && Q_ARCH_BIT == 64
+		const __uint128_t uResult = (static_cast<__uint128_t>(this->ullMultiplicand) * ullMultiplier;
+		*pullProductHigh = static_cast<std::uint64_t>(uResult >> 64ULL);
+		return static_cast<std::uint64_t>(uResult);
+	#else
+		const std::uint64_t ullLow = (ullMultiplicand & 0xFFFFFFFF) * ullMultiplier;
+		std::uint64_t ullHigh = (ullMultiplicand >> 32ULL) * ullMultiplier;
+		ullHigh += ullLow >> 32ULL;
+		*pullProductHigh = ullHigh >> 32ULL;
+		return (ullHigh << 32ULL) | (ullLow & 0xFFFFFFFF);
+	#endif
+	}
+}
+
 /* @section: [internal] constants */
 // constant of largest valid base
 inline constexpr int kMaxNumberBase = 36;
@@ -90,7 +116,7 @@ struct IntegerToString_t
 
 struct BigInteger_t
 {
-	BigInteger_t& ShiftLeft(const std::uint32_t nCount)
+	Q_INLINE BigInteger_t& ShiftLeft(const std::uint32_t nCount)
 	{
 		if (nCount >= 128U)
 		{
@@ -115,7 +141,7 @@ struct BigInteger_t
 		return *this;
 	}
 
-	BigInteger_t& ShiftRight(const std::uint32_t nCount)
+	Q_INLINE BigInteger_t& ShiftRight(const std::uint32_t nCount)
 	{
 		if (nCount >= 128U)
 		{
@@ -140,7 +166,7 @@ struct BigInteger_t
 		return *this;
 	}
 
-	BigInteger_t& Add(const BigInteger_t& other)
+	Q_INLINE BigInteger_t& Add(const BigInteger_t& other)
 	{
 	#if defined(Q_COMPILER_CLANG) && Q_ARCH_BIT == 64
 		std::uint64_t ullCarryLow;
@@ -162,47 +188,50 @@ struct BigInteger_t
 		return *this;
 	}
 
-	BigInteger_t& Multiply(std::uint64_t ullMultiplicand)
+	Q_INLINE BigInteger_t& Multiply(const std::uint64_t ullMultiplier)
 	{
-	#if defined(Q_COMPILER_MSC) && Q_ARCH_BIT == 64
-	#if defined(Q_ARCH_ARM64)
-		// @test: haven't tested that
-		const std::uint64_t ullLowCarry = ::__umulh(this->ullLow, ullMultiplicand);
-		this->ullLow *= ullMultiplicand;
-		this->ullHigh = this->ullHigh * ullMultiplicand + ullLowCarry;
-	#else
-		std::uint64_t ullLowCarry;
-		this->ullLow = ::_umul128(this->ullLow, ullMultiplicand, &ullLowCarry);
-		this->ullHigh = this->ullHigh * ullMultiplicand + ullLowCarry;
-	#endif
-	#elif (defined(Q_COMPILER_CLANG) || defined(Q_COMPILER_GCC)) && Q_ARCH_BIT == 64
-		const __uint128_t uResult = ((static_cast<__uint128_t>(this->ullHigh) << 64ULL) | this->ullLow) * ullMultiplicand;
+	#if (defined(Q_COMPILER_CLANG) || defined(Q_COMPILER_GCC)) && Q_ARCH_BIT == 64
+		const __uint128_t uResult = ((static_cast<__uint128_t>(this->ullHigh) << 64ULL) | this->ullLow) * ullMultiplier;
 		this->ullLow = static_cast<std::uint64_t>(uResult);
 		this->ullHigh = static_cast<std::uint64_t>(uResult >> 64ULL);
 	#else
-		const std::uint64_t ullLowLow = (this->ullLow & 0xFFFFFFFF) * ullMultiplicand;
-		std::uint64_t ullLowHigh = (this->ullLow >> 32ULL) * ullMultiplicand;
-		ullLowHigh += ullLowLow >> 32ULL;
-		this->ullLow = (ullLowHigh << 32ULL) | (ullLowLow & 0xFFFFFFFF);
-		ullLowHigh >>= 32ULL;
-		this->ullHigh = this->ullHigh * ullMultiplicand + ullLowHigh;
+		std::uint64_t ullLowCarry;
+		this->ullLow = DETAIL::Multiply64To128(this->ullLow, ullMultiplier, &ullLowCarry);
+		this->ullHigh = this->ullHigh * ullMultiplier + ullLowCarry;
 	#endif
 		return *this;
 	}
 
-	BigInteger_t& Divide(const std::uint64_t ullDividend)
+	Q_INLINE BigInteger_t& Divide10()
 	{
-	#if (defined(Q_COMPILER_CLANG) || defined(Q_COMPILER_GCC)) && Q_ARCH_BIT == 64
-		const __uint128_t uResult = ((static_cast<__uint128_t>(this->ullHigh) << 64ULL) | this->ullLow) / ullDividend;
-		this->ullLow = static_cast<std::uint64_t>(uResult);
-		this->ullHigh = static_cast<std::uint64_t>(uResult >> 64ULL);
-	#else
-		const std::uint64_t ullLowMiddle = ((this->ullHigh % ullDividend) << 32U) | (this->ullLow >> 32U);
-		const std::uint64_t ullLowHigh = ullLowMiddle / ullDividend;
-		const std::uint64_t ullLowLow = ((ullLowMiddle % ullDividend) << 32U) | ((this->ullLow & 0xFFFFFFFF) / ullDividend);
-		this->ullLow = (ullLowHigh << 32U) | ullLowLow;
-		this->ullHigh /= ullDividend;
-	#endif
+		// 128-bit right shift by 1
+		std::uint64_t ullMiddleLow = (this->ullLow >> 1ULL) | (this->ullHigh << 63ULL);
+		std::uint64_t ullMiddleHigh = this->ullHigh >> 1ULL;
+
+		// calculate intermediate value with carry
+		std::uint64_t ullSum = ullMiddleLow;
+		ullSum += ullMiddleHigh;
+		if (ullSum < ullMiddleLow) // handle carry from addition
+			ullSum++;
+
+		// calculate right shift by 66
+		std::uint64_t ullProductHigh;
+		DETAIL::Multiply64To128(ullSum, 0xCCCCCCCCCCCCCCCD, &ullProductHigh);
+		ullProductHigh >>= 2ULL;
+
+		// calculate remainder modulo 5
+		ullSum -= ullProductHigh * 5ULL;
+
+		// subtract remainder from shifted value
+		const std::uint64_t ullMiddleLowOld = ullMiddleLow;
+		ullMiddleLow -= ullSum;
+		if (ullMiddleLow > ullMiddleLowOld) // handle borrow
+			ullMiddleHigh--;
+
+		// multiply by fixed point constant
+		this->ullLow = DETAIL::Multiply64To128(ullMiddleLow, 0xCCCCCCCCCCCCCCCD, &ullProductHigh);
+		ullProductHigh += ullMiddleLow * 0xCCCCCCCCCCCCCCCC;
+		this->ullHigh = ullProductHigh + ullMiddleHigh * 0xCCCCCCCCCCCCCCCD;
 		return *this;
 	}
 
@@ -562,40 +591,11 @@ T* RealToString(const V value, T* tszDestination, const std::size_t nDestination
 		}
 
 		// 128-bit multiply of the state by 100
-#if defined(Q_COMPILER_MSC) && Q_ARCH_BIT == 64
-#if defined(Q_ARCH_ARM64)
-		// @test: haven't tested that
-		const std::uint64_t ullLowProduct = ::__umulh(ullStateLow, 100ULL);
-		ullStateLow *= 100UL;
-		uCarry = ::__umulh(ullStateHigh, 100ULL);
-		ullStateHigh *= 100UL;
-		ullStateHigh += ullLowProduct;
-#else
 		std::uint64_t ullLowProduct;
-		ullStateLow = ::_umul128(ullStateLow, 100ULL, &ullLowProduct);
 		std::uint64_t ullHighProduct;
-		ullStateHigh = ::_umul128(ullStateHigh, 100ULL, &ullHighProduct) + ullLowProduct;
+		ullStateLow = DETAIL::Multiply64To128(ullStateLow, 100ULL, &ullLowProduct);
+		ullStateHigh = DETAIL::Multiply64To128(ullStateHigh, 100ULL, &ullHighProduct) + ullLowProduct;
 		uCarry = static_cast<std::uint32_t>(ullHighProduct);
-#endif
-#elif (defined(Q_COMPILER_CLANG) || defined(Q_COMPILER_GCC)) && Q_ARCH_BIT == 64
-		__uint128_t uLowProduct = ullStateLow * static_cast<__uint128_t>(100ULL);
-		ullStateLow = static_cast<std::uint64_t>(uLowProduct);
-		__uint128_t uHighProduct = (ullStateHigh * static_cast<__uint128_t>(100ULL)) + (uLowProduct >> 64U);
-		ullStateHigh = static_cast<std::uint64_t>(uHighProduct);
-		uCarry = static_cast<std::uint32_t>(uHighProduct >> 64U);
-#else
-		std::uint64_t ullLowLow = (ullStateLow & 0xFFFFFFFF) * 100U;
-		std::uint64_t ullLowHigh = (ullStateLow >> 32U) * 100U;
-		ullLowHigh += ullLowLow >> 32U;
-		ullStateLow = (ullLowHigh << 32U) | (ullLowLow & 0xFFFFFFFF);
-		uCarry = ullLowHigh >> 32U;
-
-		std::uint64_t ullHighLow = (ullStateHigh & 0xFFFFFFFF) * 100U + uCarry;
-		std::uint64_t ullHighHigh = (ullStateHigh >> 32U) * 100U;
-		ullHighHigh += ullHighLow >> 32U;
-		ullStateHigh = (ullHighHigh << 32U) | (ullHighLow & 0xFFFFFFFF);
-		uCarry = ullHighHigh >> 32U;
-#endif
 
 		if (iPrecision >= 2)
 		{
@@ -1536,7 +1536,7 @@ constexpr V StringToReal(const T* tszSourceBegin, T** ptszSourceEnd = nullptr, i
 		{
 			do
 			{
-				mantissaDecimal.Divide(10ULL);
+				mantissaDecimal.Divide10();
 
 				if ((mantissaDecimal.ullHigh | mantissaDecimal.ullLow) != 0ULL)
 				{
