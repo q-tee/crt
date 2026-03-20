@@ -112,6 +112,18 @@ namespace CRT
 		auto pLeftByte = static_cast<const std::uint8_t*>(pLeftBuffer);
 		auto pRightByte = static_cast<const std::uint8_t*>(pRightBuffer);
 
+		while (nCount >= sizeof(std::uintptr_t))
+		{
+			const std::uintptr_t uLeft = *reinterpret_cast<const std::uintptr_t*>(pLeftByte);
+			const std::uintptr_t uRight = *reinterpret_cast<const std::uintptr_t*>(pRightByte);
+			if (uLeft != uRight)
+				break;
+
+			pLeftByte += sizeof(std::uintptr_t);
+			pRightByte += sizeof(std::uintptr_t);
+			nCount -= sizeof(std::uintptr_t);
+		}
+
 		while (nCount-- != 0U)
 		{
 			if (const std::uint8_t uLeft = *pLeftByte++, uRight = *pRightByte++; uLeft != uRight)
