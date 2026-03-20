@@ -197,7 +197,7 @@ namespace CRT
 	#ifdef Q_ISA_SSE2
 		// copy the max of owords
 		const __m128i arrByte = ::_mm_set1_epi8(uByte);
-		for (std::size_t i = 0U; i < (nCount >> 4U); i += 16U)
+		for (std::size_t i = 0U; i < (nCount >> 4U); ++i)
 		{
 			::_mm_storeu_si128(reinterpret_cast<__m128i*>(pCurrentDestination), arrByte);
 			pCurrentDestination += sizeof(__m128i);
@@ -205,7 +205,7 @@ namespace CRT
 		nCount &= 15U;
 	#endif
 	#if defined(Q_OS_WINDOWS) && (defined(Q_COMPILER_MSC) || defined(Q_COMPILER_CLANG))
-	#ifdef Q_ARCH_X86_64
+	#ifdef Q_ARCH_X64
 		// copy the max of qwords
 		::__stosq(reinterpret_cast<std::uint64_t*>(pCurrentDestination), static_cast<std::uint64_t>(uByte) * 0x0101010101010101ULL, nCount >> 3U);
 		pCurrentDestination += nCount & ~7U;
@@ -257,7 +257,7 @@ namespace CRT
 
 	#ifdef Q_ISA_SSE2
 		// copy the max of owords
-		for (std::size_t i = 0U; i < (nCount >> 4U); i += 16U)
+		for (std::size_t i = 0U; i < (nCount >> 4U); ++i)
 		{
 			::_mm_storeu_si128(reinterpret_cast<__m128i*>(pCurrentDestination), ::_mm_loadu_si128(reinterpret_cast<const __m128i*>(pCurrentSource)));
 			pCurrentDestination += sizeof(__m128i);
@@ -267,7 +267,7 @@ namespace CRT
 	#endif
 	#if defined(Q_OS_WINDOWS) && (defined(Q_COMPILER_MSC) || defined(Q_COMPILER_CLANG))
 		std::size_t nCopiedCount;
-	#ifdef Q_ARCH_X86_64
+	#ifdef Q_ARCH_X64
 		// copy the max of qwords
 		::__movsq(reinterpret_cast<std::uint64_t*>(pCurrentDestination), reinterpret_cast<const std::uint64_t*>(pCurrentSource), nCount >> 3U);
 		nCopiedCount = nCount & ~7U;
