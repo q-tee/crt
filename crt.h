@@ -1061,11 +1061,8 @@ namespace CRT
 	template <typename T> requires (std::is_same_v<T, char> || std::is_same_v<T, wchar_t>)
 	constexpr T* StringCopy(T* tszDestination, const T* tszSource)
 	{
-		while (*tszSource != '\0')
-			*tszDestination++ = *tszSource++;
-
-		*tszDestination = '\0';
-		return tszDestination;
+		while ((*tszDestination++ = *tszSource++) != '\0');
+		return tszDestination - 1;
 	}
 
 	/// copy a one string to another up to the specified count of characters, alternative of 'stpncpy()', 'wcpncpy()'
@@ -1095,14 +1092,11 @@ namespace CRT
 	template <typename T> requires (std::is_same_v<T, char> || std::is_same_v<T, wchar_t>)
 	constexpr T* StringCat(T* tszDestination, const T* tszSource)
 	{
-		while (*tszDestination != '\0')
-			++tszDestination;
+		tszDestination += StringLength(tszDestination);
 
-		while (*tszSource != '\0')
-			*tszDestination++ = *tszSource++;
+		while ((*tszDestination++ = *tszSource++) != '\0');
 
-		*tszDestination = '\0';
-		return tszDestination;
+		return tszDestination - 1;
 	}
 
 	/// append a one string to another up to the specified count of characters, alternative of 'stpncat()', 'wcpncat()'
