@@ -707,25 +707,15 @@ namespace CRT
 					// check if any of the bytes is zero
 					if constexpr (sizeof(T) == 2U)
 					{
-					#ifdef Q_ARCH_BIT == 64
-						constexpr std::uintptr_t uLsbMask = 0x0001000100010001ULL;
-						constexpr std::uintptr_t uMsbMask = 0x8000800080008000ULL;
-					#else
-						constexpr std::uintptr_t uLsbMask = 0x00010001;
-						constexpr std::uintptr_t uMsbMask = 0x80008000;
-					#endif
+						constexpr std::uintptr_t uLsbMask = static_cast<std::uintptr_t>(0x0001000100010001ULL);
+						constexpr std::uintptr_t uMsbMask = static_cast<std::uintptr_t>(0x8000800080008000ULL);
 						if ((((uBits - uLsbMask) & ~uBits) & uMsbMask) != 0U)
 							break;
 					}
 					else if constexpr (sizeof(T) == 1U)
 					{
-					#ifdef Q_ARCH_BIT == 64
-						constexpr std::uintptr_t uLsbMask = 0x0101010101010101ULL;
-						constexpr std::uintptr_t uMsbMask = 0x8080808080808080ULL;
-					#else
-						constexpr std::uintptr_t uLsbMask = 0x01010101;
-						constexpr std::uintptr_t uMsbMask = 0x80808080;
-					#endif
+						constexpr std::uintptr_t uLsbMask = static_cast<std::uintptr_t>(0x0101010101010101ULL);
+						constexpr std::uintptr_t uMsbMask = static_cast<std::uintptr_t>(0x8080808080808080ULL);
 						if ((((uBits - uLsbMask) & ~uBits) & uMsbMask) != 0U)
 							break;
 					}
@@ -769,25 +759,15 @@ namespace CRT
 					// check if any of the bytes is zero
 					if constexpr (sizeof(T) == 2U)
 					{
-					#ifdef Q_ARCH_BIT == 64
-						constexpr std::uintptr_t uLsbMask = 0x0001000100010001ULL;
-						constexpr std::uintptr_t uMsbMask = 0x8000800080008000ULL;
-					#else
-						constexpr std::uintptr_t uLsbMask = 0x00010001;
-						constexpr std::uintptr_t uMsbMask = 0x80008000;
-					#endif
+						constexpr std::uintptr_t uLsbMask = static_cast<std::uintptr_t>(0x0001000100010001ULL);
+						constexpr std::uintptr_t uMsbMask = static_cast<std::uintptr_t>(0x8000800080008000ULL);
 						if ((((uBits - uLsbMask) & ~uBits) & uMsbMask) != 0U)
 							break;
 					}
 					else if constexpr (sizeof(T) == 1U)
 					{
-					#ifdef Q_ARCH_BIT == 64
-						constexpr std::uintptr_t uLsbMask = 0x0101010101010101ULL;
-						constexpr std::uintptr_t uMsbMask = 0x8080808080808080ULL;
-					#else
-						constexpr std::uintptr_t uLsbMask = 0x01010101;
-						constexpr std::uintptr_t uMsbMask = 0x80808080;
-					#endif
+						constexpr std::uintptr_t uLsbMask = static_cast<std::uintptr_t>(0x0101010101010101ULL);
+						constexpr std::uintptr_t uMsbMask = static_cast<std::uintptr_t>(0x8080808080808080ULL);
 						if ((((uBits - uLsbMask) & ~uBits) & uMsbMask) != 0U)
 							break;
 					}
