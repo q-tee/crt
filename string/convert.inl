@@ -4,7 +4,7 @@ namespace DETAIL
 {
 	Q_INLINE inline std::uint64_t Multiply64To128(std::uint64_t ullMultiplicand, std::uint64_t ullMultiplier, std::uint64_t* pullProductHigh)
 	{
-	#if defined(Q_COMPILER_MSC) && Q_ARCH_BIT == 64
+	#if Q_ARCH_BIT == 64 && defined(Q_COMPILER_MSC)
 	#if defined(Q_ARCH_ARM64)
 		// @test: haven't tested that
 		*pullProductHigh = ::__umulh(ullMultiplicand, ullMultiplier);
@@ -12,16 +12,24 @@ namespace DETAIL
 	#else
 		return ::_umul128(ullMultiplier, ullMultiplicand, pullProductHigh);
 	#endif
-	#elif (defined(Q_COMPILER_CLANG) || defined(Q_COMPILER_GCC)) && Q_ARCH_BIT == 64
+	#elif Q_ARCH_BIT == 64 && (defined(Q_COMPILER_CLANG) || defined(Q_COMPILER_GCC)) 
 		const __uint128_t uResult = static_cast<__uint128_t>(ullMultiplicand) * ullMultiplier;
 		*pullProductHigh = static_cast<std::uint64_t>(uResult >> 64ULL);
 		return static_cast<std::uint64_t>(uResult);
 	#else
-		const std::uint64_t ullLow = (ullMultiplicand & 0xFFFFFFFF) * ullMultiplier;
-		std::uint64_t ullHigh = (ullMultiplicand >> 32ULL) * ullMultiplier;
-		ullHigh += ullLow >> 32ULL;
-		*pullProductHigh = ullHigh >> 32ULL;
-		return (ullHigh << 32ULL) | (ullLow & 0xFFFFFFFF);
+		const std::uint32_t ullLeftLow = static_cast<std::uint32_t>(ullMultiplicand);
+		const std::uint32_t ullLeftHigh = static_cast<std::uint32_t>(ullMultiplicand >> 32ULL);
+		const std::uint32_t ullRightLow = static_cast<std::uint32_t>(ullMultiplier);
+		const std::uint32_t ullRightHigh = static_cast<std::uint32_t>(ullMultiplier >> 32ULL);
+
+		const std::uint64_t ullProductLowLow = static_cast<std::uint64_t>(ullLeftLow) * ullRightLow;
+		const std::uint64_t ullProductLowHigh = static_cast<std::uint64_t>(ullLeftLow) * ullRightHigh;
+		const std::uint64_t ullProductHighLow = static_cast<std::uint64_t>(ullLeftHigh) * ullRightLow;
+		const std::uint64_t ullProductHighHigh = static_cast<std::uint64_t>(ullLeftHigh) * ullRightHigh;
+
+		const std::uint64_t ullMiddle = (ullProductLowLow >> 32ULL) + static_cast<std::uint32_t>(ullProductLowHigh) + static_cast<std::uint32_t>(ullProductHighLow);
+		*pullProductHigh = ullProductHighHigh + (ullProductLowHigh >> 32ULL) + (ullProductHighLow >> 32ULL) + (ullMiddle >> 32ULL);
+		return (ullProductLowLow & 0xFFFFFFFF) | (ullMiddle << 32ULL);
 	#endif
 	}
 }
