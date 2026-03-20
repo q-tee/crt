@@ -253,6 +253,27 @@ namespace CRT
 	/// @returns: pointer to the @a`pwDestination` advanced by @a'nCount'
 	Q_INLINE Q_CRT_NO_BUILTIN inline wchar_t* MemorySetW(wchar_t* pwDestination, const wchar_t wChar, std::size_t nCount)
 	{
+	#ifdef Q_ISA_SSE2
+		__m128i arrChar;
+		if constexpr (sizeof(wchar_t) == 2U)
+			arrChar = ::_mm_set1_epi16(static_cast<short>(wChar));
+		else
+			arrChar = ::_mm_set1_epi32(static_cast<int>(wChar));
+
+		constexpr std::size_t nShift = sizeof(wchar_t) == 2U ? 3U : 2U;
+		constexpr std::size_t nMask = sizeof(wchar_t) == 2U ? 7U : 3U;
+		constexpr std::size_t nElements = sizeof(__m128i) / sizeof(wchar_t);
+
+		// copy the max of owords
+		for (std::size_t i = 0U; i < (nCount >> nShift); ++i)
+		{
+			::_mm_storeu_si128(reinterpret_cast<__m128i*>(pwDestination), arrChar);
+			pwDestination += nElements;
+		}
+		nCount &= nMask;
+	#endif
+
+		// copy the rest of chars
 		while (nCount-- != 0U)
 			*pwDestination++ = wChar;
 
@@ -315,6 +336,22 @@ namespace CRT
 	/// @returns: pointer to the @a`pwDestination` advanced by @a'nCount'
 	Q_INLINE Q_CRT_NO_BUILTIN inline wchar_t* MemoryCopyW(wchar_t* pwDestination, const wchar_t* pwSource, std::size_t nCount)
 	{
+	#ifdef Q_ISA_SSE2
+		constexpr std::size_t nShift = sizeof(wchar_t) == 2U ? 3U : 2U;
+		constexpr std::size_t nMask = sizeof(wchar_t) == 2U ? 7U : 3U;
+		constexpr std::size_t nElements = sizeof(__m128i) / sizeof(wchar_t);
+
+		// copy the max of owords
+		for (std::size_t i = 0U; i < (nCount >> nShift); ++i)
+		{
+			::_mm_storeu_si128(reinterpret_cast<__m128i*>(pwDestination), ::_mm_loadu_si128(reinterpret_cast<const __m128i*>(pwSource)));
+			pwDestination += nElements;
+			pwSource += nElements;
+		}
+		nCount &= nMask;
+	#endif
+
+		// copy the rest of chars
 		while (nCount-- != 0U)
 			*pwDestination++ = *pwSource++;
 
@@ -331,37 +368,7 @@ namespace CRT
 
 		// check if buffers don't overlap, copy from lower to higher addresses
 		if (pCurrentDestination <= pCurrentSource || pCurrentDestination >= pCurrentSource + nCount)
-		{
-		#if defined(Q_OS_WINDOWS) && (defined(Q_COMPILER_MSC) || defined(Q_COMPILER_CLANG))
-			std::size_t nCopiedCount;
-		#ifdef Q_ARCH_X86_64
-			// copy the max of qwords
-			::__movsq(reinterpret_cast<std::uint64_t*>(pCurrentDestination), reinterpret_cast<const std::uint64_t*>(pCurrentSource), nCount >> 3U);
-			nCopiedCount = nCount & ~7U;
-			pCurrentDestination += nCopiedCount;
-			pCurrentSource += nCopiedCount;
-			nCount &= 7U;
-		#endif
-			// copy the rest of dwords
-			::__movsd(reinterpret_cast<unsigned long*>(pCurrentDestination), reinterpret_cast<const unsigned long*>(pCurrentSource), nCount >> 2U);
-			nCopiedCount = nCount & ~3U;
-			pCurrentDestination += nCopiedCount;
-			pCurrentSource += nCopiedCount;
-			nCount &= 3U;
-			// copy the rest of words
-			::__movsw(reinterpret_cast<std::uint16_t*>(pCurrentDestination), reinterpret_cast<const std::uint16_t*>(pCurrentSource), nCount >> 1U);
-			nCopiedCount = nCount & ~1U;
-			pCurrentDestination += nCopiedCount;
-			pCurrentSource += nCopiedCount;
-			nCount &= 1U;
-			// copy the rest of bytes
-			::__movsb(pCurrentDestination, pCurrentSource, nCount);
-		#else
-			// copy the rest of bytes
-			while (nCount-- != 0U)
-				*pCurrentDestination++ = *pCurrentSource++;
-		#endif
-		}
+			MemoryCopy(pCurrentDestination, pCurrentSource, nCount);
 		// otherwise buffers overlapping, copy from higher to lower addresses
 		else
 		{
@@ -384,18 +391,13 @@ namespace CRT
 	/// @returns: pointer to the @a`pwDestination`
 	Q_INLINE Q_CRT_NO_BUILTIN inline wchar_t* MemoryMoveW(wchar_t* pwDestination, const wchar_t* pwSource, std::size_t nCount)
 	{
-		auto pwCurrentDestination = pwDestination;
-
 		// check if buffers don't overlap, copy from lower to higher addresses
-		if (pwCurrentDestination <= pwSource || pwCurrentDestination >= pwSource + nCount)
-		{
-			while (nCount-- != 0U)
-				*pwCurrentDestination++ = *pwSource++;
-		}
+		if (pwDestination <= pwSource || pwDestination >= pwSource + nCount)
+			MemoryCopyW(pwDestination, pwSource, nCount);
 		// otherwise buffers overlapping, copy from higher to lower addresses
 		else
 		{
-			pwCurrentDestination += nCount - 1U;
+			auto pwCurrentDestination = pwDestination + (nCount - 1U);
 			pwSource += nCount - 1U;
 
 			while (nCount-- != 0U)
