@@ -687,8 +687,8 @@ namespace CRT
 		{
 			if (!std::is_constant_evaluated())
 			{
-				// get up to 4-byte alignment
-				while ((reinterpret_cast<std::uintptr_t>(tszSourceEnd) & 3U) != 0U)
+				// get up to 4/8-byte alignment
+				while ((reinterpret_cast<std::uintptr_t>(tszSourceEnd) & (sizeof(std::uintptr_t) - 1U)) != 0U)
 				{
 					if (*tszSourceEnd == '\0')
 						return tszSourceEnd - tszSource;
@@ -696,24 +696,39 @@ namespace CRT
 					++tszSourceEnd;
 				}
 
-				// scan over 4 bytes at a time to find the terminating null
+				// scan over 4/8 bytes at a time to find the terminating null
+				// @note: read past the end of the buffer, but guaranteed to never cross the page boundaries
 				while (true)
 				{
-					const std::uint32_t uBits = *reinterpret_cast<const std::uint32_t*>(tszSourceEnd);
+					const std::uintptr_t uBits = *reinterpret_cast<const std::uintptr_t*>(tszSourceEnd);
 
 					// check if any of the bytes is zero
 					if constexpr (sizeof(T) == 2U)
 					{
-						if ((((uBits - 0x00010001) & ~uBits) & 0x80008000) != 0U)
+					#ifdef Q_ARCH_BIT == 64
+						constexpr std::uintptr_t uLsbMask = 0x0001000100010001ULL;
+						constexpr std::uintptr_t uMsbMask = 0x8000800080008000ULL;
+					#else
+						constexpr std::uintptr_t uLsbMask = 0x00010001;
+						constexpr std::uintptr_t uMsbMask = 0x80008000;
+					#endif
+						if ((((uBits - uLsbMask) & ~uBits) & uMsbMask) != 0U)
 							break;
 					}
 					else if constexpr (sizeof(T) == 1U)
 					{
-						if ((((uBits - 0x01010101) & ~uBits) & 0x80808080) != 0U)
+					#ifdef Q_ARCH_BIT == 64
+						constexpr std::uintptr_t uLsbMask = 0x0101010101010101ULL;
+						constexpr std::uintptr_t uMsbMask = 0x8080808080808080ULL;
+					#else
+						constexpr std::uintptr_t uLsbMask = 0x01010101;
+						constexpr std::uintptr_t uMsbMask = 0x80808080;
+					#endif
+						if ((((uBits - uLsbMask) & ~uBits) & uMsbMask) != 0U)
 							break;
 					}
 
-					tszSourceEnd += (sizeof(std::uint32_t) / sizeof(T));
+					tszSourceEnd += (sizeof(std::uintptr_t) / sizeof(T));
 				}
 			}
 		}
@@ -735,8 +750,8 @@ namespace CRT
 		{
 			if (!std::is_constant_evaluated())
 			{
-				// get up to 4-byte alignment
-				while ((reinterpret_cast<std::uintptr_t>(tszSourceEnd) & 3U) != 0U)
+				// get up to 4/8-byte alignment
+				while ((reinterpret_cast<std::uintptr_t>(tszSourceEnd) & (sizeof(std::uintptr_t) - 1U)) != 0U)
 				{
 					if (*tszSourceEnd == '\0')
 						return tszSourceEnd - tszSource;
@@ -744,26 +759,39 @@ namespace CRT
 					++tszSourceEnd;
 				}
 
-				// scan over 4 bytes at a time to find the terminating null
-				// @note: read past the end of the buffer, but guaranteed to never cross the page boundaries
-				while (nMaxLength >= 4U)
+				// scan over 4/8 bytes at a time to find the terminating null
+				while (nMaxLength >= sizeof(std::uintptr_t))
 				{
-					const std::uint32_t uBits = *reinterpret_cast<const std::uint32_t*>(tszSourceEnd);
+					const std::uintptr_t uBits = *reinterpret_cast<const std::uintptr_t*>(tszSourceEnd);
 
 					// check if any of the bytes is zero
 					if constexpr (sizeof(T) == 2U)
 					{
-						if ((((uBits - 0x00010001) & ~uBits) & 0x80008000) != 0U)
+					#ifdef Q_ARCH_BIT == 64
+						constexpr std::uintptr_t uLsbMask = 0x0001000100010001ULL;
+						constexpr std::uintptr_t uMsbMask = 0x8000800080008000ULL;
+					#else
+						constexpr std::uintptr_t uLsbMask = 0x00010001;
+						constexpr std::uintptr_t uMsbMask = 0x80008000;
+					#endif
+						if ((((uBits - uLsbMask) & ~uBits) & uMsbMask) != 0U)
 							break;
 					}
 					else if constexpr (sizeof(T) == 1U)
 					{
-						if ((((uBits - 0x01010101) & ~uBits) & 0x80808080) != 0U)
+					#ifdef Q_ARCH_BIT == 64
+						constexpr std::uintptr_t uLsbMask = 0x0101010101010101ULL;
+						constexpr std::uintptr_t uMsbMask = 0x8080808080808080ULL;
+					#else
+						constexpr std::uintptr_t uLsbMask = 0x01010101;
+						constexpr std::uintptr_t uMsbMask = 0x80808080;
+					#endif
+						if ((((uBits - uLsbMask) & ~uBits) & uMsbMask) != 0U)
 							break;
 					}
 
-					tszSourceEnd += (sizeof(std::uint32_t) / sizeof(T));
-					nMaxLength -= 4U;
+					tszSourceEnd += (sizeof(std::uintptr_t) / sizeof(T));
+					nMaxLength -= sizeof(std::uintptr_t);
 				}
 			}
 		}
@@ -795,7 +823,7 @@ namespace CRT
 
 		return tchLeft - tchRight;
 	}
-	
+
 	/// compare two strings up to the specified count of characters, alternative of 'strncmp()', 'wcsncmp()'
 	/// @remarks: compares at most the first @a`nCount` characters of @a`tszLeft` and @a`tszRight` strings and return a value that indicates their relationship
 	/// @returns: <0 - if @a`tszLeft` less than @a`tszRight`, 0 - if @a`tszLeft` is identical to @a`tszRight`, >0 - if @a`tszLeft` greater than @a`tszRight`
@@ -983,7 +1011,7 @@ namespace CRT
 
 		return nullptr;
 	}
-	
+
 	/// scan the string for characters not in specified character set, alternative of 'strpspn()', 'wcspspn()'
 	/// @remarks: search doesn't include the terminating null character
 	/// @returns: pointer to the first occurence of a character in @a`tszSource` that doesn't belong to the @a`tszSet` set of characters
@@ -1063,7 +1091,7 @@ namespace CRT
 			*tszSource++ = '\0';
 			*ptszLast = tszSource;
 		}
-		
+
 		return tszToken;
 	}
 
@@ -1117,8 +1145,7 @@ namespace CRT
 	template <typename T> requires (std::is_same_v<T, char> || std::is_same_v<T, wchar_t>)
 	constexpr T* StringCatN(T* tszDestination, const T* tszSource, std::size_t nCount)
 	{
-		while (*tszDestination != '\0')
-			++tszDestination;
+		tszDestination += StringLength(tszDestination);
 
 		while (*tszSource != '\0' && nCount-- != 0U)
 			*tszDestination++ = *tszSource++;
