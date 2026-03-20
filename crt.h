@@ -515,7 +515,7 @@ namespace CRT
 	#ifdef Q_CRT_STRING_WIDE_TYPE
 		return (arrWideCharacterTypeLUT[arrWideCharacterTypeOffsets[wChar >> 5U] + (wChar & 0x1F)] & (TYPE_LOWER | TYPE_UPPER | TYPE_ALPHA)) != 0U;
 	#else
-		return ((wChar >= L'0' && wChar <= L'9') || (wChar >= L'A' && wChar <= L'Z') || (wChar >= L'a' && wChar <= L'z'));
+		return ((wChar >= L'A' && wChar <= L'Z') || (wChar >= L'a' && wChar <= L'z'));
 	#endif
 	}
 
