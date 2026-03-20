@@ -1070,14 +1070,23 @@ namespace CRT
 
 	/// copy a one string to another up to the specified count of characters, alternative of 'stpncpy()', 'wcpncpy()'
 	/// @remarks: copies the initial @a`nCount` characters of @a`tszSource` to @a`tszDestination`. if @a`nCount` is less than or equal to the length of @a`tszSource`, the terminating null character isn't appended to the copied string. if @a`nCount` is greater than the length of @a`tszSource`, the @a`tszDestination` is padded with null characters up to @a`nCount`. the behavior is undefined if the source and destination strings overlap
-	/// @returns: pointer to the @a`tszDestination` advanced by @a`nCount`
+	/// @returns: pointer to the first terminating null character written in @a`tszDestination`. if no terminating null character is found in @a`tszSource`, returns pointer to the @a`tszDestination` advanced by @a`nCount`
 	template <typename T> requires (std::is_same_v<T, char> || std::is_same_v<T, wchar_t>)
 	constexpr T* StringCopyN(T* tszDestination, const T* tszSource, std::size_t nCount)
 	{
-		while (nCount-- != 0U)
-			*tszDestination++ = (*tszSource != '\0' ? *tszSource++ : '\0');
+		while (nCount != 0U && *tszSource != '\0')
+		{
+			*tszDestination++ = *tszSource++;
+			--nCount;
+		}
 
-		return tszDestination;
+		T* tszResult = tszDestination;
+
+		// pad the remaining buffer with nulls
+		while (nCount-- != 0U)
+			*tszDestination++ = '\0';
+
+		return tszResult;
 	}
 
 	/// append a one string to another, alternative of 'stpcat()', 'wcpcat()'
