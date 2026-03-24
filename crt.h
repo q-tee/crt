@@ -149,7 +149,7 @@ namespace CRT
 
 	/// find character in a buffer, alternative of 'memchr()'
 	/// @remarks: looks for the first occurrence of @a`uSearch` byte in the first @a`nCount` bytes of @a`pBuffer`, performs unsigned comparison for elements
-	/// @returns: pointer to the first occurence of @a`uSearch` byte in @a`pBuffer` on success, null otherwise
+	/// @returns: pointer to the first occurrence of @a`uSearch` byte in @a`pBuffer` on success, null otherwise
 	Q_INLINE inline void* MemoryChar(const void* pBuffer, const std::uint8_t uSearch, std::size_t nCount)
 	{
 		auto pByte = static_cast<const std::uint8_t*>(pBuffer);
@@ -167,7 +167,7 @@ namespace CRT
 
 	/// find wide character in a buffer, alternative of 'wmemchr()'
 	/// @remarks: looks for the first occurrence of @a`wSearch` character in the first @a`nCount` characters of @a`pwBuffer`, performs signed comparison for elements
-	/// @returns: pointer to the first occurence of @a`wSearch` character in @a`pwBuffer` on success, null otherwise
+	/// @returns: pointer to the first occurrence of @a`wSearch` character in @a`pwBuffer` on success, null otherwise
 	Q_INLINE inline wchar_t* MemoryCharW(wchar_t* pwBuffer, const wchar_t wSearch, std::size_t nCount)
 	{
 		while (nCount-- != 0U)
@@ -996,7 +996,7 @@ namespace CRT
 
 	/// scan the string for characters not in specified character set, alternative of 'strpspn()', 'wcspspn()'
 	/// @remarks: search doesn't include the terminating null character
-	/// @returns: pointer to the first occurence of a character in @a`tszSource` that doesn't belong to the @a`tszSet` set of characters
+	/// @returns: pointer to the first occurrence of a character in @a`tszSource` that doesn't belong to the @a`tszSet` set of characters
 	template <typename T> requires (std::is_same_v<T, char> || std::is_same_v<T, wchar_t>)
 	constexpr T* StringSpan(const T* tszSource, const T* tszSet)
 	{
@@ -1024,7 +1024,7 @@ namespace CRT
 
 	/// scan the string for characters in specified character set, alternative of 'strpbrk()', 'wcspbrk()'
 	/// @remarks: search doesn't include the terminating null character
-	/// @returns: pointer to the first occurence of a character in @a`tszSource` that belongs to @a`tszSet` set of characters on success, null otherwise
+	/// @returns: pointer to the first occurrence of a character in @a`tszSource` that belongs to @a`tszSet` set of characters on success, null otherwise
 	template <typename T> requires (std::is_same_v<T, char> || std::is_same_v<T, wchar_t>)
 	constexpr T* StringBreak(const T* tszSource, const T* tszSet)
 	{
