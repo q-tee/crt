@@ -154,6 +154,34 @@ namespace CRT
 	{
 		auto pByte = static_cast<const std::uint8_t*>(pBuffer);
 
+		// get up to 4/8-byte alignment
+		while (nCount != 0U && (reinterpret_cast<std::uintptr_t>(pByte) & (sizeof(std::uintptr_t) - 1U)) != 0U)
+		{
+			if (*pByte == uSearch)
+				return const_cast<std::uint8_t*>(pByte);
+
+			++pByte;
+			--nCount;
+		}
+
+		constexpr std::uintptr_t kLsbMask = static_cast<std::uintptr_t>(0x0101010101010101ULL);
+		constexpr std::uintptr_t kMsbMask = static_cast<std::uintptr_t>(0x8080808080808080ULL);
+
+		// scan over 4/8 bytes at a time to find the target byte
+		const std::uintptr_t uSearchBits = uSearch * kLsbMask;
+		while (nCount >= sizeof(std::uintptr_t))
+		{
+			const std::uintptr_t uBits = *reinterpret_cast<const std::uintptr_t*>(pByte) ^ uSearchBits;
+
+			// check if any of the bytes is zero
+			if ((((uBits - kLsbMask) & ~uBits) & kMsbMask) != 0U)
+				// chunk has match, fall down to byte-by-byte comparison @test: instead we could determine its position by countr_zero/countl_zero but depends on endian and gain is questionable
+				break;
+
+			pByte += sizeof(std::uintptr_t);
+			nCount -= sizeof(std::uintptr_t);
+		}
+
 		while (nCount-- != 0U)
 		{
 			if (*pByte == uSearch)
