@@ -1640,11 +1640,11 @@ constexpr V StringToReal(const T* tszSourceBegin, T** ptszSourceEnd = nullptr, i
 		 *  111 -> ROUND UP
 		 */
 		constexpr std::uint32_t kGuardShift = 64U - RealTraits_t<V>::kMantissaWidth - 1U;
-		constexpr std::uint64_t ullGuardBit = 1ULL << kGuardShift;
-		constexpr std::uint64_t ullStickyMask = ullGuardBit - 1ULL;
+		constexpr std::uint64_t kGuardBit = 1ULL << kGuardShift;
+		constexpr std::uint64_t kStickyMask = kGuardBit - 1ULL;
 
 		uMantissa = mantissaDecimal.ullHigh >> (64U - RealTraits_t<V>::kMantissaWidth);
-		const bool bRoundUp = ((mantissaDecimal.ullHigh & ullGuardBit) != 0ULL) & (((mantissaDecimal.ullHigh & ullStickyMask) != 0ULL) | ((uMantissa & 1U) != 0U));
+		const bool bRoundUp = ((mantissaDecimal.ullHigh & kGuardBit) != 0ULL) & (((mantissaDecimal.ullHigh & kStickyMask) != 0ULL) | ((uMantissa & 1U) != 0U));
 		uMantissa = (uMantissa + bRoundUp) & RealTraits_t<V>::kMantissaMask;
 
 		// check for mantissa overflow

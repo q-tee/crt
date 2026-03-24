@@ -707,16 +707,20 @@ namespace CRT
 					// check if any of the bytes is zero
 					if constexpr (sizeof(T) == 2U)
 					{
-						constexpr std::uintptr_t uLsbMask = static_cast<std::uintptr_t>(0x0001000100010001ULL);
-						constexpr std::uintptr_t uMsbMask = static_cast<std::uintptr_t>(0x8000800080008000ULL);
-						if ((((uBits - uLsbMask) & ~uBits) & uMsbMask) != 0U)
+						constexpr std::uintptr_t kLsbMask = static_cast<std::uintptr_t>(0x0001000100010001ULL);
+						constexpr std::uintptr_t kMsbMask = static_cast<std::uintptr_t>(0x8000800080008000ULL);
+
+						if ((((uBits - kLsbMask) & ~uBits) & kMsbMask) != 0U)
+							// chunk has match, fall down to byte-by-byte comparison @test: instead we could determine its position by countr_zero/countl_zero but depends on endian and gain is questionable
 							break;
 					}
 					else if constexpr (sizeof(T) == 1U)
 					{
-						constexpr std::uintptr_t uLsbMask = static_cast<std::uintptr_t>(0x0101010101010101ULL);
-						constexpr std::uintptr_t uMsbMask = static_cast<std::uintptr_t>(0x8080808080808080ULL);
-						if ((((uBits - uLsbMask) & ~uBits) & uMsbMask) != 0U)
+						constexpr std::uintptr_t kLsbMask = static_cast<std::uintptr_t>(0x0101010101010101ULL);
+						constexpr std::uintptr_t kMsbMask = static_cast<std::uintptr_t>(0x8080808080808080ULL);
+
+						if ((((uBits - kLsbMask) & ~uBits) & kMsbMask) != 0U)
+							// chunk has match, fall down to byte-by-byte comparison @test: instead we could determine its position by countr_zero/countl_zero but depends on endian and gain is questionable
 							break;
 					}
 
@@ -760,16 +764,20 @@ namespace CRT
 					// check if any of the bytes is zero
 					if constexpr (sizeof(T) == 2U)
 					{
-						constexpr std::uintptr_t uLsbMask = static_cast<std::uintptr_t>(0x0001000100010001ULL);
-						constexpr std::uintptr_t uMsbMask = static_cast<std::uintptr_t>(0x8000800080008000ULL);
-						if ((((uBits - uLsbMask) & ~uBits) & uMsbMask) != 0U)
+						constexpr std::uintptr_t kLsbMask = static_cast<std::uintptr_t>(0x0001000100010001ULL);
+						constexpr std::uintptr_t kMsbMask = static_cast<std::uintptr_t>(0x8000800080008000ULL);
+
+						if ((((uBits - kLsbMask) & ~uBits) & kMsbMask) != 0U)
+							// chunk has match, fall down to byte-by-byte comparison @test: instead we could determine its position by countr_zero/countl_zero but depends on endian and gain is questionable
 							break;
 					}
 					else if constexpr (sizeof(T) == 1U)
 					{
-						constexpr std::uintptr_t uLsbMask = static_cast<std::uintptr_t>(0x0101010101010101ULL);
-						constexpr std::uintptr_t uMsbMask = static_cast<std::uintptr_t>(0x8080808080808080ULL);
-						if ((((uBits - uLsbMask) & ~uBits) & uMsbMask) != 0U)
+						constexpr std::uintptr_t kLsbMask = static_cast<std::uintptr_t>(0x0101010101010101ULL);
+						constexpr std::uintptr_t kMsbMask = static_cast<std::uintptr_t>(0x8080808080808080ULL);
+
+						if ((((uBits - kLsbMask) & ~uBits) & kMsbMask) != 0U)
+							// chunk has match, fall down to byte-by-byte comparison @test: instead we could determine its position by countr_zero/countl_zero but depends on endian and gain is questionable
 							break;
 					}
 
@@ -779,11 +787,8 @@ namespace CRT
 			}
 		}
 
-		while (nMaxLength != 0U && *tszSourceEnd != '\0')
-		{
+		while (*tszSourceEnd != '\0' && nMaxLength-- != 0U)
 			++tszSourceEnd;
-			--nMaxLength;
-		}
 
 		return static_cast<std::size_t>(tszSourceEnd - tszSource);
 	}
