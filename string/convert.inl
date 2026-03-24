@@ -1356,8 +1356,7 @@ constexpr V StringToInteger(const T* tszSourceBegin, T** ptszSourceEnd = nullptr
 template <typename V = float, typename T> requires (std::is_floating_point_v<V> && (std::is_same_v<T, char> || std::is_same_v<T, wchar_t>))
 constexpr V StringToReal(const T* tszSourceBegin, T** ptszSourceEnd = nullptr, int* pnError = nullptr)
 {
-	using UIntType_t = typename RealTraits_t<V>::BitEquivalent_t;
-	UIntType_t uBits;
+	using UIntType_t = RealTraits_t<V>::BitEquivalent_t;
 
 	// set a local variable as error output if it's not set
 	int nError = 0;
@@ -1390,8 +1389,7 @@ constexpr V StringToReal(const T* tszSourceBegin, T** ptszSourceEnd = nullptr, i
 			*ptszSourceEnd = const_cast<T*>(tszSourceEnd);
 		}
 
-		uBits = (uSign | RealTraits_t<V>::kExponentMask | RealTraits_t<V>::kQuietNanMask);
-		return std::bit_cast<V>(uBits);
+		return std::bit_cast<V>(uSign | RealTraits_t<V>::kExponentMask | RealTraits_t<V>::kQuietNanMask);
 	}
 
 	// check for infinity value
@@ -1407,8 +1405,7 @@ constexpr V StringToReal(const T* tszSourceBegin, T** ptszSourceEnd = nullptr, i
 			*ptszSourceEnd = const_cast<T*>(tszSourceEnd);
 		}
 
-		uBits = (uSign | RealTraits_t<V>::kExponentMask);
-		return std::bit_cast<V>(uBits);
+		return std::bit_cast<V>(uSign | RealTraits_t<V>::kExponentMask);
 	}
 
 	// skip leading zeros
@@ -1478,14 +1475,17 @@ constexpr V StringToReal(const T* tszSourceBegin, T** ptszSourceEnd = nullptr, i
 	if (ptszSourceEnd != nullptr)
 		*ptszSourceEnd = const_cast<T*>(tszSourceEnd);
 
+	// check for true zero
+	if (mantissaDecimal.ullLow == 0ULL)
+		return std::bit_cast<V>(uSign);
+
 	// check for exponent underflow
 	if (iExponentDecimal + nDigitCount < (RealTraits_t<V>::kExponentDecimalMin + 1))
 	{
 		*pnError = ERANGE;
 
 		// signed zero
-		uBits = uSign;
-		return std::bit_cast<V>(uBits);
+		return std::bit_cast<V>(uSign);
 	}
 
 	// check for exponent overflow
@@ -1494,87 +1494,108 @@ constexpr V StringToReal(const T* tszSourceBegin, T** ptszSourceEnd = nullptr, i
 		*pnError = ERANGE;
 
 		// signed infinity
-		uBits = uSign | RealTraits_t<V>::kExponentMask;
-		return std::bit_cast<V>(uBits);
+		return std::bit_cast<V>(uSign | RealTraits_t<V>::kExponentMask);
 	}
 
 	// convert decimal exponent into binary
-	int iExponent = 0;
+	int iExponent = 123;
 
-	// check if the number is true zero
-	if (mantissaDecimal.ullLow == 0ULL)
+	// normalize mantissa
+	// keep high 4 bits non-zero
+	const std::uint32_t uInitialShift = static_cast<std::uint32_t>(std::countl_zero(mantissaDecimal.ullLow)) + 60U;
+	mantissaDecimal.ShiftLeft(uInitialShift);
+	iExponent -= uInitialShift;
+
+	// @todo: atm we have precision error of 1ULP, to fix that we must take sticky bits from shifted out ones to correctly solve ties
+	// check for positive exponent
+	if (iExponentDecimal > 0)
 	{
-		iExponent = RealTraits_t<V>::kExponentMin - 1;
-		mantissaDecimal.ullLow = 0ULL;
-	}
-	else
-	{
-		// normalize mantissa
-		// keep high 4 bits non-zero
-		std::uint8_t nLeadingZerosCount;
-		if (mantissaDecimal.ullHigh != 0ULL)
-			nLeadingZerosCount = static_cast<std::uint8_t>(std::countl_zero(mantissaDecimal.ullHigh)) - 4U;
-		else
-			nLeadingZerosCount = static_cast<std::uint8_t>(std::countl_zero(mantissaDecimal.ullLow)) + 60U;
-
-		mantissaDecimal.ShiftLeft(nLeadingZerosCount);
-		iExponent -= nLeadingZerosCount;
-
-		// take performed shift into account
-		iExponent += 123;
-
-		// @todo: normalization approach is robust but quite slow
-		// check for positive exponent
-		if (iExponentDecimal > 0)
+	#if 1
+		// calculate exponent in 10^19 chunks
+		while (iExponentDecimal >= 19)
 		{
-			do
-			{
-				mantissaDecimal.Multiply(10ULL);
+			// ensure 60 bits of headroom for the massive multiplier
+			mantissaDecimal.ShiftRight(60U);
+			iExponent += 60;
 
-				// keep high 4 bits all zero
-				while ((mantissaDecimal.ullHigh >> 60ULL) != 0ULL)
-				{
-					mantissaDecimal.ShiftRight(1U);
-					++iExponent;
-				}
-			} while (--iExponentDecimal > 0);
+			// multiply by 10^19 in a single pass
+			mantissaDecimal.Multiply(10000000000000000000ULL);
+			iExponentDecimal -= 19;
+
+			// keep high 4 bits all zero
+			if (const std::uint32_t nLeadingZeros = static_cast<std::uint32_t>(std::countl_zero(mantissaDecimal.ullHigh)); nLeadingZeros < 4U)
+			{
+				const std::uint32_t uShift = 4U - nLeadingZeros;
+				mantissaDecimal.ShiftRight(uShift);
+				iExponent += uShift;
+			}
 		}
-		// otherwise check for negative exponent
-		else if (iExponentDecimal < 0)
+	#endif
+
+		while (iExponentDecimal > 0)
 		{
-			do
+			mantissaDecimal.Multiply(10ULL);
+			--iExponentDecimal;
+
+			// keep high 4 bits all zero
+			if (const std::uint32_t nLeadingZeros = static_cast<std::uint32_t>(std::countl_zero(mantissaDecimal.ullHigh)); nLeadingZeros < 4U)
 			{
-				mantissaDecimal.Divide10();
+				const std::uint32_t uShift = 4U - nLeadingZeros;
+				mantissaDecimal.ShiftRight(uShift);
+				iExponent += uShift;
+			}
+		}
+	}
+	// otherwise check for negative exponent
+	else if (iExponentDecimal < 0)
+	{
+	#if 0 // @test: doesn't really affects much
+		while (iExponentDecimal <= -19)
+		{
+			// keep mantissa completely full before dividing to retain maximum precision
+			if (const std::uint32_t nLeadingZeros = static_cast<std::uint32_t>(std::countl_zero(mantissaDecimal.ullHigh)); nLeadingZeros >= 4U)
+			{
+				const std::uint32_t uShift = nLeadingZeros - 4U;
+				mantissaDecimal.ShiftLeft(uShift);
+				iExponent -= uShift;
+			}
 
-				if ((mantissaDecimal.ullHigh | mantissaDecimal.ullLow) != 0ULL)
-				{
-					// @todo: do use bsr/clz only when it's guaranteed to compile into appropriate instructions otherwise it will be less efficient
-					// keep high 4 bits non-zero
-#if 0
-					int nLeadingZerosCount;
-					if (mantissaDecimal.ullHigh != 0ULL)
-						nLeadingZerosCount = std::countl_zero(mantissaDecimal.ullHigh) - 4;
-					else
-						nLeadingZerosCount = std::countl_zero(mantissaDecimal.ullLow) + 60;
-
-					mantissaDecimal.ShiftLeft(nLeadingZerosCount);
-					iExponent -= nLeadingZerosCount;
-#else
-					while ((mantissaDecimal.ullHigh >> 60ULL) == 0ULL)
-					{
-						mantissaDecimal.ShiftLeft(1U);
-						--iExponent;
-					}
-
-					mantissaDecimal.ShiftRight(1U);
-					++iExponent;
-#endif
-				}
-			} while (++iExponentDecimal < 0);
+			mantissaDecimal.Divide10_19();
+			iExponentDecimal += 19;
 		}
 
-		mantissaDecimal.ShiftLeft(4U);
+		while (iExponentDecimal < 0)
+		{
+			mantissaDecimal.Divide10();
+			++iExponentDecimal;
+		}
+
+		// ensure high 4 bits non-zero
+		if (const std::uint32_t nLeadingZeros = static_cast<std::uint32_t>(std::countl_zero(mantissaDecimal.ullHigh)); nLeadingZeros >= 4U)
+		{
+			const std::uint32_t uShift = nLeadingZeros - 4U;
+			mantissaDecimal.ShiftLeft(uShift);
+			iExponent -= uShift;
+		}
+	#else
+		do
+		{
+			mantissaDecimal.Divide10();
+
+			if ((mantissaDecimal.ullHigh | mantissaDecimal.ullLow) != 0ULL)
+			{
+				if (const std::uint32_t nLeadingZeros = static_cast<std::uint32_t>(std::countl_zero(mantissaDecimal.ullHigh)); nLeadingZeros >= 4U)
+				{
+					const std::uint32_t uShift = nLeadingZeros - 4U;
+					mantissaDecimal.ShiftLeft(uShift);
+					iExponent -= uShift;
+				}
+			}
+		} while (++iExponentDecimal < 0);
+	#endif
 	}
+
+	mantissaDecimal.ShiftLeft(4U);
 
 	// convert decimal mantissa into binary
 	UIntType_t uMantissa;
@@ -1591,43 +1612,39 @@ constexpr V StringToReal(const T* tszSourceBegin, T** ptszSourceEnd = nullptr, i
 		// check if value is denormalized
 		if (iExponent < RealTraits_t<V>::kExponentMin)
 		{
-			// check for true zero
-			if ((mantissaDecimal.ullHigh | mantissaDecimal.ullLow) == 0ULL)
-				uMantissa = 0U;
 			// check for denormalized exponent underflow
-			else if (iExponent < RealTraits_t<V>::kExponentDenormalMin - 1)
+			if (iExponent < RealTraits_t<V>::kExponentDenormalMin - 1)
 			{
-				uMantissa = 0U;
 				*pnError = ERANGE;
-			}
-			else
-			{
-				mantissaDecimal.ullHigh >>= (-RealTraits_t<V>::kExponentBias - iExponent);
-				uMantissa = mantissaDecimal.ullHigh >> (64ULL - RealTraits_t<V>::kMantissaWidth);
+				return std::bit_cast<V>(uSign);
 			}
 
+			mantissaDecimal.ullHigh >>= (-RealTraits_t<V>::kExponentBias - iExponent);
 			iExponent = -RealTraits_t<V>::kExponentMax;
 		}
 		// otherwise value is normalized
 		else
-		{
-			// set implicit bit
-			mantissaDecimal.ullHigh <<= 1ULL;
-			uMantissa = mantissaDecimal.ullHigh >> (64ULL - RealTraits_t<V>::kMantissaWidth);
-		}
+			// shift out implicit bit
+			mantissaDecimal.ullHigh <<= 1U;
 
 		/*
 		 * apply rounding rules:
 		 * [GRS] guard (G), round (R), and sticky (S) bits
 		 *  000 -> NO ROUND
+		 *  001 -> NO ROUND
 		 *  010 -> NO ROUND
-		 *  100 -> NO ROUND (TIE)
+		 *  011 -> NO ROUND
+		 *  100 -> LSB (TIE-BREAK)
 		 *  101 -> ROUND UP
 		 *  110 -> ROUND UP
 		 *  111 -> ROUND UP
 		 */
-		const std::uint32_t kGuardShift = 64U - RealTraits_t<V>::kMantissaWidth - 1U;
-		const bool bRoundUp = ((mantissaDecimal.ullHigh & (1ULL << kGuardShift)) != 0ULL && (mantissaDecimal.ullHigh & ((1ULL << kGuardShift) - 1ULL)) != 0ULL);
+		constexpr std::uint32_t kGuardShift = 64U - RealTraits_t<V>::kMantissaWidth - 1U;
+		constexpr std::uint64_t ullGuardBit = 1ULL << kGuardShift;
+		constexpr std::uint64_t ullStickyMask = ullGuardBit - 1ULL;
+
+		uMantissa = mantissaDecimal.ullHigh >> (64U - RealTraits_t<V>::kMantissaWidth);
+		const bool bRoundUp = ((mantissaDecimal.ullHigh & ullGuardBit) != 0ULL) & (((mantissaDecimal.ullHigh & ullStickyMask) != 0ULL) | ((uMantissa & 1U) != 0U));
 		uMantissa = (uMantissa + bRoundUp) & RealTraits_t<V>::kMantissaMask;
 
 		// check for mantissa overflow
@@ -1638,7 +1655,6 @@ constexpr V StringToReal(const T* tszSourceBegin, T** ptszSourceEnd = nullptr, i
 		iExponent += RealTraits_t<V>::kExponentBias;
 	}
 
-	uBits = static_cast<UIntType_t>(uSign) | (static_cast<UIntType_t>(iExponent) << RealTraits_t<V>::kMantissaWidth) | uMantissa;
-	return std::bit_cast<V>(uBits);
+	return std::bit_cast<V>(static_cast<UIntType_t>(uSign) | (static_cast<UIntType_t>(iExponent) << RealTraits_t<V>::kMantissaWidth) | uMantissa);
 }
 #endif
