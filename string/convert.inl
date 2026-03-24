@@ -8,7 +8,7 @@ namespace DETAIL
 	#if defined(Q_ARCH_ARM64)
 		// @test: haven't tested that
 		*pullProductHigh = ::__umulh(ullMultiplicand, ullMultiplier);
-		return ullLow * ullMultiplier;
+		return ullMultiplicand * ullMultiplier;
 	#else
 		return ::_umul128(ullMultiplier, ullMultiplicand, pullProductHigh);
 	#endif
@@ -18,18 +18,18 @@ namespace DETAIL
 		return static_cast<std::uint64_t>(uResult);
 	#else
 		const std::uint32_t ullLeftLow = static_cast<std::uint32_t>(ullMultiplicand);
-		const std::uint32_t ullLeftHigh = static_cast<std::uint32_t>(ullMultiplicand >> 32ULL);
+		const std::uint32_t ullLeftHigh = static_cast<std::uint32_t>(ullMultiplicand >> 32U);
 		const std::uint32_t ullRightLow = static_cast<std::uint32_t>(ullMultiplier);
-		const std::uint32_t ullRightHigh = static_cast<std::uint32_t>(ullMultiplier >> 32ULL);
+		const std::uint32_t ullRightHigh = static_cast<std::uint32_t>(ullMultiplier >> 32U);
 
 		const std::uint64_t ullProductLowLow = static_cast<std::uint64_t>(ullLeftLow) * ullRightLow;
 		const std::uint64_t ullProductLowHigh = static_cast<std::uint64_t>(ullLeftLow) * ullRightHigh;
 		const std::uint64_t ullProductHighLow = static_cast<std::uint64_t>(ullLeftHigh) * ullRightLow;
 		const std::uint64_t ullProductHighHigh = static_cast<std::uint64_t>(ullLeftHigh) * ullRightHigh;
 
-		const std::uint64_t ullMiddle = (ullProductLowLow >> 32ULL) + static_cast<std::uint32_t>(ullProductLowHigh) + static_cast<std::uint32_t>(ullProductHighLow);
-		*pullProductHigh = ullProductHighHigh + (ullProductLowHigh >> 32ULL) + (ullProductHighLow >> 32ULL) + (ullMiddle >> 32ULL);
-		return (ullProductLowLow & 0xFFFFFFFF) | (ullMiddle << 32ULL);
+		const std::uint64_t ullMiddle = (ullProductLowLow >> 32U) + static_cast<std::uint32_t>(ullProductLowHigh) + static_cast<std::uint32_t>(ullProductHighLow);
+		*pullProductHigh = ullProductHighHigh + (ullProductLowHigh >> 32U) + (ullProductHighLow >> 32U) + (ullMiddle >> 32U);
+		return (ullProductLowLow & 0xFFFFFFFF) | (ullMiddle << 32U);
 	#endif
 	}
 }
@@ -213,8 +213,8 @@ struct BigInteger_t
 	Q_INLINE BigInteger_t& Divide10()
 	{
 		// 128-bit right shift by 1
-		std::uint64_t ullMiddleLow = (this->ullLow >> 1ULL) | (this->ullHigh << 63ULL);
-		std::uint64_t ullMiddleHigh = this->ullHigh >> 1ULL;
+		std::uint64_t ullMiddleLow = (this->ullLow >> 1U) | (this->ullHigh << 63U);
+		std::uint64_t ullMiddleHigh = this->ullHigh >> 1U;
 
 		// calculate intermediate value with carry
 		std::uint64_t ullSum = ullMiddleLow;
@@ -225,10 +225,10 @@ struct BigInteger_t
 		// calculate right shift by 66
 		std::uint64_t ullProductHigh;
 		DETAIL::Multiply64To128(ullSum, 0xCCCCCCCCCCCCCCCD, &ullProductHigh);
-		ullProductHigh >>= 2ULL;
+		ullProductHigh >>= 2U;
 
 		// calculate remainder modulo 5
-		ullSum -= ullProductHigh * 5ULL;
+		ullSum -= ullProductHigh * 5U;
 
 		// subtract remainder from shifted value
 		const std::uint64_t ullMiddleLowOld = ullMiddleLow;
