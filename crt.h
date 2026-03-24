@@ -743,12 +743,13 @@ namespace CRT
 			if (!std::is_constant_evaluated())
 			{
 				// get up to 4/8-byte alignment
-				while ((reinterpret_cast<std::uintptr_t>(tszSourceEnd) & (sizeof(std::uintptr_t) - 1U)) != 0U)
+				while (nMaxLength != 0U && (reinterpret_cast<std::uintptr_t>(tszSourceEnd) & (sizeof(std::uintptr_t) - 1U)) != 0U)
 				{
 					if (*tszSourceEnd == '\0')
 						return tszSourceEnd - tszSource;
 
 					++tszSourceEnd;
+					--nMaxLength;
 				}
 
 				// scan over 4/8 bytes at a time to find the terminating null
